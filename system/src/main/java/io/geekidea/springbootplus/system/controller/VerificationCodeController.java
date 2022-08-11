@@ -22,14 +22,13 @@ import io.geekidea.springbootplus.framework.common.api.ApiResult;
 import io.geekidea.springbootplus.framework.log.annotation.Module;
 import io.geekidea.springbootplus.framework.log.annotation.OperationLog;
 import io.geekidea.springbootplus.framework.log.enums.OperationLogType;
+import io.geekidea.springbootplus.framework.util.RedisCacheUtil;
 import io.geekidea.springbootplus.framework.util.UUIDUtil;
 import io.geekidea.springbootplus.framework.util.VerificationCode;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -60,9 +59,6 @@ import java.util.concurrent.TimeUnit;
 @ConditionalOnProperty(value = {"spring-boot-plus.enable-verify-code"}, matchIfMissing = true)
 public class VerificationCodeController {
 
-    @Autowired
-    private RedisTemplate<String, String> redisTemplate;
-
     /**
      * 获取验证码
      */
@@ -75,7 +71,7 @@ public class VerificationCodeController {
         String code = verificationCode.getText();
         String verifyToken = UUIDUtil.getUuid();
         // 缓存到Redis
-        redisTemplate.opsForValue().set(String.format(CommonRedisKey.VERIFY_CODE, verifyToken), code, 5, TimeUnit.MINUTES);
+        RedisCacheUtil.set(String.format(CommonRedisKey.VERIFY_CODE, verifyToken), code, 5, TimeUnit.MINUTES);
         response.setHeader(CommonConstant.VERIFY_TOKEN, verifyToken);
         response.setContentType(MediaType.IMAGE_JPEG_VALUE);
         response.setHeader("Pragma", "No-cache");
@@ -106,7 +102,7 @@ public class VerificationCodeController {
         map.put(CommonConstant.IMAGE, CommonConstant.BASE64_PREFIX + base64);
         map.put(CommonConstant.VERIFY_TOKEN, verifyToken);
         // 缓存到Redis
-        redisTemplate.opsForValue().set(String.format(CommonRedisKey.VERIFY_CODE, verifyToken), code, 5, TimeUnit.MINUTES);
+        RedisCacheUtil.set(String.format(CommonRedisKey.VERIFY_CODE, verifyToken), code, 5, TimeUnit.MINUTES);
         return ApiResult.ok(map);
     }
 

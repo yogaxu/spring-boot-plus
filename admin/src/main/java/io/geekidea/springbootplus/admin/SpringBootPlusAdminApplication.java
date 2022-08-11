@@ -33,7 +33,6 @@ import org.springframework.core.env.ConfigurableEnvironment;
  **/
 @Slf4j
 @Configuration
-@EnableAutoConfiguration
 @EnableAdminServer
 @SpringBootApplication
 public class SpringBootPlusAdminApplication {

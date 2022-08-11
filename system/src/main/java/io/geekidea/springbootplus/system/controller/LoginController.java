@@ -21,6 +21,7 @@ import io.geekidea.springbootplus.framework.common.api.ApiResult;
 import io.geekidea.springbootplus.framework.log.annotation.Module;
 import io.geekidea.springbootplus.framework.log.annotation.OperationLogIgnore;
 import io.geekidea.springbootplus.framework.shiro.util.JwtTokenUtil;
+import io.geekidea.springbootplus.framework.util.RedisCacheUtil;
 import io.geekidea.springbootplus.system.service.LoginService;
 import io.geekidea.springbootplus.system.service.SysUserService;
 import io.geekidea.springbootplus.system.vo.LoginSysUserTokenVo;
@@ -28,8 +29,8 @@ import io.geekidea.springbootplus.system.vo.SysUserQueryVo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -58,9 +59,6 @@ public class LoginController {
     @Autowired
     private SysUserService sysUserService;
 
-    @Autowired
-    private RedisTemplate redisTemplate;
-
     @PostMapping("/login")
     @OperationLogIgnore
     @ApiOperation(value = "登录", notes = "系统用户登录", response = io.geekidea.springbootplus.system.vo.LoginSysUserTokenVo.class)
@@ -80,20 +78,9 @@ public class LoginController {
     @GetMapping("/getSysUserInfo")
     @ApiOperation(value = "根据token获取系统登录用户信息", response = SysUserQueryVo.class)
     public ApiResult<JSON> getSysUser() throws Exception {
-//        String token =  JwtTokenUtil.getToken();
-//        String tokenSha256 = DigestUtils.sha256Hex(token);
-//        LoginSysUserVo loginSysUserVo = (LoginSysUserVo) redisTemplate.opsForValue().get(tokenSha256);
-//        return ApiResult.ok(loginSysUserVo);
-
-        String json = "{\n" +
-                "    roles: ['admin'],\n" +
-                "    introduction: 'I am a super administrator',\n" +
-                "    avatar: 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',\n" +
-                "    name: 'Super Admin'\n" +
-                "  }";
-        JSON array = JSON.parseObject(json);
-
-        return ApiResult.ok(array);
+        String token =  JwtTokenUtil.getToken();
+        String tokenSha256 = DigestUtils.sha256Hex(token);
+        return ApiResult.ok(RedisCacheUtil.get(tokenSha256, JSON.class));
     }
 
     @PostMapping("/logout")

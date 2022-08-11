@@ -30,7 +30,6 @@ import org.apache.commons.lang3.time.DateUtils;
 import org.apache.shiro.authc.AuthenticationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletResponse;
@@ -59,11 +58,6 @@ public class ShiroLoginServiceImpl implements ShiroLoginService {
     @Lazy
     @Autowired
     private SpringBootPlusProperties springBootPlusProperties;
-
-    @Lazy
-    @Autowired
-    private RedisTemplate redisTemplate;
-
 
     @Override
     public void refreshToken(JwtToken jwtToken, HttpServletResponse httpServletResponse) throws Exception {

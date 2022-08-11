@@ -22,7 +22,6 @@ import io.geekidea.springbootplus.framework.shiro.util.JwtUtil;
 import io.geekidea.springbootplus.framework.shiro.vo.LoginSysUserRedisVo;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 
@@ -36,13 +35,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class LoginUtil {
 
-    private static RedisTemplate redisTemplate;
-
-    public LoginUtil(RedisTemplate redisTemplate) {
-        LoginUtil.redisTemplate = redisTemplate;
-    }
-
-
     /**
      * 获取当前登录用户对象
      *
@@ -55,7 +47,7 @@ public class LoginUtil {
         if (StringUtils.isBlank(username)) {
             return null;
         }
-        return (LoginSysUserRedisVo) redisTemplate.opsForValue().get(String.format(CommonRedisKey.LOGIN_USER, username));
+        return RedisCacheUtil.get(String.format(CommonRedisKey.LOGIN_USER, username), LoginSysUserRedisVo.class);
     }
 
     /**

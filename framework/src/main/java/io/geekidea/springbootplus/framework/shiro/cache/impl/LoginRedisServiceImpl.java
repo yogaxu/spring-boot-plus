@@ -28,11 +28,11 @@ import io.geekidea.springbootplus.framework.shiro.vo.LoginSysUserRedisVo;
 import io.geekidea.springbootplus.framework.shiro.vo.LoginSysUserVo;
 import io.geekidea.springbootplus.framework.util.ClientInfoUtil;
 import io.geekidea.springbootplus.framework.util.HttpServletRequestUtil;
+import io.geekidea.springbootplus.framework.util.RedisCacheUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -51,9 +51,6 @@ public class LoginRedisServiceImpl implements LoginRedisService {
 
     @Autowired
     private JwtProperties jwtProperties;
-
-    @Autowired
-    private RedisTemplate redisTemplate;
 
     /**
      * key-value: 有过期时间-->token过期时间
@@ -103,13 +100,13 @@ public class LoginRedisServiceImpl implements LoginRedisService {
 
         // 1. tokenMd5:jwtTokenRedisVo
         String loginTokenRedisKey = String.format(CommonRedisKey.LOGIN_TOKEN, tokenMd5);
-        redisTemplate.opsForValue().set(loginTokenRedisKey, jwtTokenRedisVo, expireDuration);
+        RedisCacheUtil.set(loginTokenRedisKey, jwtTokenRedisVo, expireDuration);
         // 2. username:loginSysUserRedisVo
-        redisTemplate.opsForValue().set(String.format(CommonRedisKey.LOGIN_USER, username), loginSysUserRedisVo, expireDuration);
+        RedisCacheUtil.set(String.format(CommonRedisKey.LOGIN_USER, username), loginSysUserRedisVo, expireDuration);
         // 3. salt hash,方便获取盐值鉴权
-        redisTemplate.opsForValue().set(String.format(CommonRedisKey.LOGIN_SALT, username), salt, expireDuration);
+        RedisCacheUtil.set(String.format(CommonRedisKey.LOGIN_SALT, username), salt, expireDuration);
         // 4. login user token
-        redisTemplate.opsForValue().set(String.format(CommonRedisKey.LOGIN_USER_TOKEN, username, tokenMd5), loginTokenRedisKey, expireDuration);
+        RedisCacheUtil.set(String.format(CommonRedisKey.LOGIN_USER_TOKEN, username, tokenMd5), loginTokenRedisKey, expireDuration);
     }
 
     @Override
@@ -127,7 +124,7 @@ public class LoginRedisServiceImpl implements LoginRedisService {
         if (StringUtils.isBlank(username)) {
             throw new IllegalArgumentException("username不能为空");
         }
-        return (LoginSysUserRedisVo) redisTemplate.opsForValue().get(String.format(CommonRedisKey.LOGIN_USER, username));
+        return RedisCacheUtil.get(String.format(CommonRedisKey.LOGIN_USER, username), LoginSysUserRedisVo.class);
     }
 
     @Override
@@ -135,8 +132,7 @@ public class LoginRedisServiceImpl implements LoginRedisService {
         if (StringUtils.isBlank(username)) {
             throw new IllegalArgumentException("username不能为空");
         }
-        LoginSysUserRedisVo userRedisVo = getLoginSysUserRedisVo(username);
-        return userRedisVo;
+        return getLoginSysUserRedisVo(username);
     }
 
     @Override
@@ -144,8 +140,7 @@ public class LoginRedisServiceImpl implements LoginRedisService {
         if (StringUtils.isBlank(username)) {
             throw new IllegalArgumentException("username不能为空");
         }
-        String salt = (String) redisTemplate.opsForValue().get(String.format(CommonRedisKey.LOGIN_SALT, username));
-        return salt;
+        return RedisCacheUtil.get(String.format(CommonRedisKey.LOGIN_SALT, username));
     }
 
     @Override
@@ -158,13 +153,13 @@ public class LoginRedisServiceImpl implements LoginRedisService {
         }
         String tokenMd5 = DigestUtils.md5Hex(token);
         // 1. delete tokenMd5
-        redisTemplate.delete(String.format(CommonRedisKey.LOGIN_TOKEN, tokenMd5));
+        RedisCacheUtil.delete(String.format(CommonRedisKey.LOGIN_TOKEN, tokenMd5));
         // 2. delete username
-        redisTemplate.delete(String.format(CommonRedisKey.LOGIN_USER, username));
+        RedisCacheUtil.delete(String.format(CommonRedisKey.LOGIN_USER, username));
         // 3. delete salt
-        redisTemplate.delete(String.format(CommonRedisKey.LOGIN_SALT, username));
+        RedisCacheUtil.delete(String.format(CommonRedisKey.LOGIN_SALT, username));
         // 4. delete user token
-        redisTemplate.delete(String.format(CommonRedisKey.LOGIN_USER_TOKEN, username, tokenMd5));
+        RedisCacheUtil.delete(String.format(CommonRedisKey.LOGIN_USER_TOKEN, username, tokenMd5));
     }
 
     @Override
@@ -173,26 +168,26 @@ public class LoginRedisServiceImpl implements LoginRedisService {
             throw new IllegalArgumentException("token不能为空");
         }
         String tokenMd5 = DigestUtils.md5Hex(token);
-        Object object = redisTemplate.opsForValue().get(String.format(CommonRedisKey.LOGIN_TOKEN, tokenMd5));
+        String object = RedisCacheUtil.get(String.format(CommonRedisKey.LOGIN_TOKEN, tokenMd5));
         return object != null;
     }
 
     @Override
     public void deleteUserAllCache(String username) {
-        Set<String> userTokenMd5Set = redisTemplate.keys(String.format(CommonRedisKey.LOGIN_USER_ALL_TOKEN, username));
+        Set<String> userTokenMd5Set = RedisCacheUtil.keys(String.format(CommonRedisKey.LOGIN_USER_ALL_TOKEN, username));
         if (CollectionUtils.isEmpty(userTokenMd5Set)) {
             return;
         }
 
         // 1. 删除登录用户的所有token信息
-        List<String> tokenMd5List = redisTemplate.opsForValue().multiGet(userTokenMd5Set);
-        redisTemplate.delete(tokenMd5List);
+        List<String> tokenMd5List = RedisCacheUtil.multiGet(userTokenMd5Set);
+        RedisCacheUtil.delete(tokenMd5List);
         // 2. 删除登录用户的所有user:token信息
-        redisTemplate.delete(userTokenMd5Set);
+        RedisCacheUtil.delete(userTokenMd5Set);
         // 3. 删除登录用户信息
-        redisTemplate.delete(String.format(CommonRedisKey.LOGIN_USER, username));
+        RedisCacheUtil.delete(String.format(CommonRedisKey.LOGIN_USER, username));
         // 4. 删除登录用户盐值信息
-        redisTemplate.delete(String.format(CommonRedisKey.LOGIN_SALT, username));
+        RedisCacheUtil.delete(String.format(CommonRedisKey.LOGIN_SALT, username));
     }
 
 

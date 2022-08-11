@@ -16,31 +16,120 @@
 
 package io.geekidea.springbootplus.framework.util;
 
-import lombok.extern.slf4j.Slf4j;
+import com.alibaba.fastjson.JSON;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
+import java.time.Duration;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
- * @author geekidea
- * @date 2018-11-08
+ * @author yogaxu
  */
 @Component
-@Slf4j
 public class RedisCacheUtil {
 
-    private static RedisCacheUtil redisCacheUtil;
+    private static RedisTemplate<String, String> redisTemplate;
 
     @Autowired
-    private RedisTemplate redisTemplate;
+    public void setRedisTemplate(RedisTemplate<String, String> redisTemplate) {
+        RedisCacheUtil.redisTemplate = redisTemplate;
+    }
 
     /**
-     * 将当前对象赋值给静态对象,调用spring组件: redisCacheUtil.redisTemplate.xxx()
+     * 添加带<b>过期时长</b>的缓存
+     *
+     * @param key      键
+     * @param value    内容
+     * @param time     过期时长
+     * @param timeUnit 时长单位
      */
-    @PostConstruct
-    public void init(){
-        redisCacheUtil = this;
+    public static void set(final String key, final Object value, final long time, final TimeUnit timeUnit) {
+        if (value instanceof String) {
+            redisTemplate.opsForValue().set(key, (String) value, time, timeUnit);
+        } else {
+            redisTemplate.opsForValue().set(key, JSON.toJSONString(value), time, timeUnit);
+        }
     }
+
+    /**
+     * 添加带<b>过期时间</b>的缓存
+     *
+     * @param key     键
+     * @param value   内容
+     * @param timeout 过期时间
+     */
+    public static void set(final String key, final Object value, final Duration timeout) {
+        if (value instanceof String) {
+            redisTemplate.opsForValue().set(key, (String) value, timeout);
+        } else {
+            redisTemplate.opsForValue().set(key, JSON.toJSONString(value), timeout);
+        }
+    }
+
+    /**
+     * 获取<b>指定类型</b>缓存
+     *
+     * @param key   键
+     * @param clazz 返回类型
+     * @return T
+     */
+    public static <T> T get(final String key, final Class<T> clazz) {
+        return JSON.parseObject(redisTemplate.opsForValue().get(key), clazz);
+    }
+
+    /**
+     * 获取<b>字符串</b>缓存
+     *
+     * @param key 键
+     * @return String
+     */
+    public static String get(final String key) {
+        return redisTemplate.opsForValue().get(key);
+    }
+
+    /**
+     * 获取key集
+     *
+     * @param pattern 标识
+     * @return Set<String>
+     */
+    public static Set<String> keys(String pattern) {
+        return redisTemplate.keys(pattern);
+    }
+
+    /**
+     * 获取多个缓存
+     *
+     * @param keys 键集
+     * @return List<String>
+     */
+    public static List<String> multiGet(Collection<String> keys) {
+        return redisTemplate.opsForValue().multiGet(keys);
+    }
+
+    /**
+     * 删除<b>单个key</b>缓存
+     *
+     * @param key 键
+     * @return Boolean
+     */
+    public static Boolean delete(final String key) {
+        return redisTemplate.delete(key);
+    }
+
+    /**
+     * 删除<b>多个key</b>缓存
+     *
+     * @param keys 键集
+     * @return Long
+     */
+    public static Long delete(final Collection<String> keys) {
+        return redisTemplate.delete(keys);
+    }
+
 }

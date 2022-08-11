@@ -27,6 +27,7 @@ import io.geekidea.springbootplus.framework.shiro.util.JwtUtil;
 import io.geekidea.springbootplus.framework.shiro.util.SaltUtil;
 import io.geekidea.springbootplus.framework.shiro.vo.LoginSysUserVo;
 import io.geekidea.springbootplus.framework.util.PasswordUtil;
+import io.geekidea.springbootplus.framework.util.RedisCacheUtil;
 import io.geekidea.springbootplus.system.convert.SysUserConvert;
 import io.geekidea.springbootplus.system.entity.SysDepartment;
 import io.geekidea.springbootplus.system.entity.SysRole;
@@ -50,7 +51,6 @@ import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.subject.Subject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -99,10 +99,6 @@ public class LoginServiceImpl implements LoginService {
     @Lazy
     @Autowired
     private SpringBootPlusProperties springBootPlusProperties;
-
-    @Lazy
-    @Autowired
-    private RedisTemplate redisTemplate;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -191,7 +187,7 @@ public class LoginServiceImpl implements LoginService {
 
         // 缓存登录信息到redis
         String tokenSha256 = DigestUtils.sha256Hex(token);
-        redisTemplate.opsForValue().set(tokenSha256, loginSysUserVo, 1, TimeUnit.DAYS);
+        RedisCacheUtil.set(tokenSha256, loginSysUserVo, 1, TimeUnit.DAYS);
 
         // 返回token和登录用户信息对象
         LoginSysUserTokenVo loginSysUserTokenVo = new LoginSysUserTokenVo();
@@ -212,7 +208,7 @@ public class LoginServiceImpl implements LoginService {
         }
         // 从redis中获取
         String redisKey = String.format(CommonRedisKey.VERIFY_CODE, verifyToken);
-        String generateCode = (String) redisTemplate.opsForValue().get(redisKey);
+        String generateCode = RedisCacheUtil.get(redisKey);
         if (StringUtils.isBlank(generateCode)) {
             throw new VerificationCodeException("验证码已过期或不正确");
         }
@@ -221,7 +217,7 @@ public class LoginServiceImpl implements LoginService {
             throw new VerificationCodeException("验证码错误");
         }
         // 验证码校验成功，删除Redis缓存
-        redisTemplate.delete(redisKey);
+        RedisCacheUtil.delete(redisKey);
     }
 
     @Override

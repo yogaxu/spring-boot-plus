@@ -6,10 +6,9 @@ spring:
   boot:
     admin:
       monitor:
-        period: 100000
         status-lifetime: 100000
-        connect-timeout: 100000
-        read-timeout: 100000
+        status-interval: 100000
+        default-timeout: 100000
       ui:
         external-views:
           - label: "🚀"
